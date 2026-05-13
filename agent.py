@@ -9,7 +9,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 from llm import chat
 from prompts import SYSTEM_PROMPT
 from tools.fs import list_files, read_file, search_files
-from tools.edit import write_file
+from tools.edit import write_file, save_output
 from config import MAX_STEPS, MAX_TOOL_OUTPUT
 
 
@@ -72,17 +72,35 @@ def parse_action(output):
 
 def run_agent(user_input):
 
-    # DIRECT COMMAND HANDLING
+    # ------------------------
+    # DIRECT COMMAND: LIST FILES (TREE MODE)
+    # ------------------------
     user_lower = user_input.lower()
 
-    if user_lower.startswith("read file"):
+    if user_lower.startswith("list files"):
         parts = user_input.split()
-        if len(parts) >= 3:
-            path = " ".join(parts[2:])
-            result = read_file(path)
-            print("\nFinal Answer:\n")
-            print(result)
-            return
+
+        # Default values
+        path = "."
+        depth = 2
+
+        # Extract path
+        if "in" in parts:
+            idx = parts.index("in")
+            path = " ".join(parts[idx + 1:])
+
+        # Extract depth (optional)
+        if "depth" in parts:
+            try:
+                depth = int(parts[parts.index("depth") + 1])
+            except:
+                pass
+
+        result = list_files(path, max_depth=depth)
+
+        print("\nFinal Answer:\n")
+        print(result)
+        return
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -132,7 +150,11 @@ def run_agent(user_input):
         # Fast-path for list_files
         if tool_name == "list_files":
             print("\nFinal Answer:\n")
-            print("\n".join(result))
+            if isinstance(result, list):
+                print("\n".join(result))
+            else:
+                print(result)
+
             return
 
         if tool_name == "read_file":
