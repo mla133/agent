@@ -1,4 +1,5 @@
 import os
+from extra_utils import CYAN, RED, GREEN, WHITE, YELLOW, OFF
 
 def read_file(path, max_lines=150):
     try:
@@ -25,10 +26,10 @@ def list_files(path=".", max_depth=2):
     path = path.strip()
 
     if not os.path.exists(path):
-        return f"Path not found: {path}"
+        return f"{RED}Path not found: {path}{OFF}"
 
     if os.path.isfile(path):
-        return f"{path} is a file"
+        return f"{CYAN}{path} is a file{OFF}"
 
     lines = []
 
@@ -39,7 +40,7 @@ def list_files(path=".", max_depth=2):
         try:
             items = sorted(os.listdir(current_path))
         except Exception as e:
-            lines.append(f"{prefix} Error: {str(e)}")
+            lines.append(f"{RED}{prefix} Error: {str(e)}{OFF}")
             return
 
         # Optional: filter hidden files
@@ -49,21 +50,27 @@ def list_files(path=".", max_depth=2):
             full_path = os.path.join(current_path, item)
             is_last = (i == len(items) - 1)
 
-            connector = "└── " if is_last else "├── "
+            connector = f"{CYAN}└──{OFF}" if is_last else f"{CYAN}├──{OFF}"
+            if os.path.isdir(full_path):
+                name = f"{CYAN}{item}/{OFF}"
+            elif item.endswith(".py"):
+                name = f"{GREEN}{item}{OFF}"
+            else:
+                name = f"{WHITE}{item}{OFF}"
+
             line = prefix + connector + item
 
             if os.path.isdir(full_path):
-                line += "/"
+                line += f"{CYAN}/{OFF}"
 
             lines.append(line)
 
             if os.path.isdir(full_path):
-                next_prefix = prefix + ("    " if is_last else "│   ")
+                next_prefix = prefix + (f"    " if is_last else f"{CYAN}│   {OFF}")
                 walk(full_path, next_prefix, depth + 1)
 
     # Root header (important for clarity)
-    lines.append(f"{path}/")
-
+    lines.append(f"{CYAN}{path}/{OFF}")
     walk(path)
 
     return "\n".join(lines)
