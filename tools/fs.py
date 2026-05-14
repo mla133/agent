@@ -50,7 +50,9 @@ def list_files(path=".", max_depth=2):
             full_path = os.path.join(current_path, item)
             is_last = (i == len(items) - 1)
 
-            connector = f"{CYAN}└──{OFF}" if is_last else f"{CYAN}├──{OFF}"
+            #connector = f"{CYAN}└──{OFF}" if is_last else f"{CYAN}├──{OFF}"
+            connector = f"{CYAN}{'└──' if is_last else '├──'}{OFF} "
+
             if os.path.isdir(full_path):
                 name = f"{CYAN}{item}/{OFF}"
             elif item.endswith(".py"):
@@ -58,15 +60,12 @@ def list_files(path=".", max_depth=2):
             else:
                 name = f"{WHITE}{item}{OFF}"
 
-            line = prefix + connector + item
-
-            if os.path.isdir(full_path):
-                line += f"{CYAN}/{OFF}"
+            line = prefix + connector + name
 
             lines.append(line)
 
             if os.path.isdir(full_path):
-                next_prefix = prefix + (f"    " if is_last else f"{CYAN}│   {OFF}")
+                next_prefix = prefix + (f"    " if is_last else f"{CYAN}│{OFF}   ")
                 walk(full_path, next_prefix, depth + 1)
 
     # Root header (important for clarity)

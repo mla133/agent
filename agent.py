@@ -3,15 +3,14 @@ import re
 import sys
 import io
 
-# Fix Windows Unicode issues
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-
 from llm import chat
 from prompts import SYSTEM_PROMPT
 from tools.fs import list_files, read_file, search_files
 from tools.edit import write_file, save_output
 from config import MAX_STEPS, MAX_TOOL_OUTPUT
 
+# Fix encoding issues with unicode characters
+sys.stdout.reconfigure(encoding="utf-8")
 
 TOOLS = {
     "list_files": list_files,
