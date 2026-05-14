@@ -1,5 +1,18 @@
 import os
-from extra_utils import CYAN, RED, GREEN, WHITE, YELLOW, OFF
+from extra_utils import CYAN, RED, GREEN, WHITE, YELLOW, BRIGHT_BLACK, OFF
+import time
+
+def format_size(bytes_):
+    if bytes_ < 1024:
+        return f"{bytes_} B"
+    elif bytes_ < 1024**2:
+        return f"{bytes_ / 1024:.1f} KB"
+    else:
+        return f"{bytes_ / 1024**2:.1f} MB"
+
+def format_mtime(path):
+    ts = os.path.getmtime(path)
+    return time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
 
 def read_file(path, max_lines=150):
     try:
@@ -50,17 +63,34 @@ def list_files(path=".", max_depth=2):
             full_path = os.path.join(current_path, item)
             is_last = (i == len(items) - 1)
 
-            #connector = f"{CYAN}└──{OFF}" if is_last else f"{CYAN}├──{OFF}"
+            stat = os.stat(full_path)
+            size = "" if os.path.isdir(full_path) else format_size(stat.st_size)
+            mtime = format_mtime(full_path)
+
             connector = f"{CYAN}{'└──' if is_last else '├──'}{OFF} "
 
             if os.path.isdir(full_path):
                 name = f"{CYAN}{item}/{OFF}"
+                meta = f"{BRIGHT_BLACK}[DIR]    {mtime}{OFF}"
             elif item.endswith(".py"):
                 name = f"{GREEN}{item}{OFF}"
+                meta = f"{BRIGHT_BLACK}{size:>8}  {mtime}{OFF}"
             else:
                 name = f"{WHITE}{item}{OFF}"
+                meta = f"{BRIGHT_BLACK}{size:>8}  {mtime}{OFF}"
 
-            line = prefix + connector + name
+            line = f"{prefix}{connector}{name}  {meta}"
+
+            #connector = f"{CYAN}└──{OFF}" if is_last else f"{CYAN}├──{OFF}"
+
+            #if os.path.isdir(full_path):
+            #    name = f"{CYAN}{item}/{OFF}"
+            #elif item.endswith(".py"):
+            #    name = f"{GREEN}{item}{OFF}"
+            #else:
+            #    name = f"{WHITE}{item}{OFF}"
+
+            #line = prefix + connector + name
 
             lines.append(line)
 
