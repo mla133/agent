@@ -1,0 +1,195 @@
+import os
+import time
+import subprocess
+
+from extra_utils import (
+    CYAN,
+    GREEN,
+    YELLOW,
+    RED,
+    WHITE,
+    BRIGHT_BLACK,
+    OFF,
+)
+
+# ============================================================
+# Size + time helpers
+# ============================================================
+
+def format_size(num_bytes: int) -> str:
+    if num_bytes < 1024:
+        return f"{num_bytes} B"
+    elif num_bytes < 1024 ** 2:
+        return f"{num_bytes / 1024:.1f} KB"
+    else:
+        return f"{num_bytes / 1024 ** 2:.1f} MB"
+
+
+def format_mtime(path: str) -> str:
+    ts = os.path.getmtime(path)
+    return time.strftime("%Y-%m-%d %H:%M", time.localtime(ts))
+
+
+# ============================================================
+# Git helpers
+# ============================================================
+
+def get_git_repo_root():
+    """Return absolute path to git repo root, or None."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return result.stdout.strip()
+    except Exception:
+        return None
+
+
+def get_git_status_map():
+    """
+    Parse `git status --porcelain` once.
+    Returns: { "relative/path": "M" | "??" | ... }
+    """
+    try:
+        result = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except Exception:
+        return {}
+
+    status = {}
+    for line in result.stdout.splitlines():
+        code = line[:2].strip()
+        path = line[3:].strip()
+        status[path] = code
+
+    return status
+
+
+# ============================================================
+# Public tools
+# ============================================================
+
+def read_file(path, max_lines=150):
+    """Read first N lines of a file, with error handling."""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return "".join(f.readlines()[:max_lines])
+    except Exception as e:
+        return str(e)
+
+
+def search_files(query):
+    """Case-insensitive filename search in current directory and subdirectories."""
+    matches = []
+    for root, _, files in os.walk("."):
+        for f in files:
+            if query.lower() in f.lower():
+                matches.append(os.path.join(root, f))
+    return matches[:20]
+
+
+def list_files(path=".", max_depth=2):
+    """
+    Tree-style directory listing with:
+    - colors
+    - file sizes
+    - modified times
+    - git status highlighting (files only)
+    """
+
+    path = path.strip()
+
+    if not os.path.exists(path):
+        return f"{RED}Path not found: {path}{OFF}"
+
+    if os.path.isfile(path):
+        return f"{CYAN}{path} is a file{OFF}"
+
+    lines = []
+
+    repo_root = get_git_repo_root()
+    git_status = get_git_status_map()
+
+    view_root = os.path.abspath(path)
+
+    # --------------------------------------------------------
+    # Recursive walker
+    # --------------------------------------------------------
+
+    def walk(current_path, prefix="", depth=0):
+    """Recursively walk directory, building lines with metadata and git status."""
+        if depth > max_depth:
+            return
+
+        try:
+            items = sorted(os.listdir(current_path))
+        except Exception as e:
+            lines.append(f"{RED}{prefix}Error: {e}{OFF}")
+            return
+
+        # Hide dotfiles (optional)
+        items = [i for i in items if not i.startswith(".")]
+        for i, item in enumerate(items):
+            connector = f"{CYAN}{'└──' if i == len(items) - 1 else '├──'}{OFF} "
+
+            # -----------------------------
+            # Base coloring
+            # -----------------------------
+            if os.path.isdir(os.path.join(current_path, item)):
+                name = f"{CYAN}{item}/{OFF}"
+            elif item.endswith(".py"):
+                name = f"{GREEN}{item}{OFF}"
+            else:
+                name = f"{WHITE}{item}{OFF}"
+
+            # -----------------------------
+            # Git overlay (FILES ONLY)
+            # -----------------------------
+            git_flag = None
+            if repo_root and not os.path.isdir(os.path.join(current_path, item)):
+                rel_path = os.path.relpath(os.path.join(current_path, item), repo_root).replace(os.sep, "/")
+                git_flag = git_status.get(rel_path)
+
+                if git_flag == "M":
+                    name = f"{YELLOW}{item}{OFF}"
+                elif git_flag == "??":
+                    name = f"{RED}{item}{OFF}"
+
+            # -----------------------------
+            # Metadata
+            # -----------------------------
+            if os.path.isdir(os.path.join(current_path, item)):
+                meta = f"{BRIGHT_BLACK}[DIR]    {format_mtime(os.path.join(current_path, item))}{OFF}"
+            else:
+                size = format_size(os.path.getsize(os.path.join(current_path, item)))
+                meta = f"{BRIGHT_BLACK}{size:>8}  {format_mtime(os.path.join(current_path, item))}{OFF}"
+
+            git_col = f"{BRIGHT_BLACK}{git_flag:>2}{OFF}" if git_flag else ""
+
+            line = f"{prefix}{connector}{name:<30} {meta} {git_col}"
+            lines.append(line)
+
+            if os.path.isdir(os.path.join(current_path, item)):
+                next_prefix = prefix + ("    " if i == len(items) - 1 else f"{CYAN}│{OFF}   ")
+                walk(os.path.join(current_path, item), next_prefix, depth + 1)
+
+    # Root header
+    lines.append(f"{CYAN}{path}/{OFF}")
+    walk(path)
+
+    return "\n".join(lines)
+
+def change_directory(new_dir):
+    """Change the current working directory."""
+    try:
+        os.chdir(new_dir)
+        return f"{GREEN}Changed to {new_dir}{OFF}"
+    except Exception as e:
+        return f"{RED}Error changing to {new_dir}: {e}{OFF}"
