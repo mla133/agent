@@ -1,0 +1,3 @@
+# Change to the parent directory
+result = change_directory("..")
+print(result)
