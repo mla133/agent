@@ -6,6 +6,8 @@ OUTPUT_DIR = "output"
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+from tools.new_tool import new_tool_function
+
 
 def write_file(path, content):
     try:

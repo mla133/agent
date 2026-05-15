@@ -7,6 +7,7 @@ from llm import chat
 from prompts import SYSTEM_PROMPT
 from tools.fs import list_files, read_file, search_files
 from tools.edit import write_file, save_output
+from tools.new_tool import new_tool_function
 from config import MAX_STEPS, MAX_TOOL_OUTPUT
 
 # Fix encoding issues with unicode characters
@@ -16,7 +17,8 @@ TOOLS = {
     "list_files": list_files,
     "read_file": read_file,
     "search_files": search_files,
-    "write_file": write_file
+    "write_file": write_file,
+    "new_tool": new_tool_function
 }
 
 
