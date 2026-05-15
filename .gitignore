@@ -219,3 +219,11 @@ __marimo__/
 
 # Any interim build and/or output folders not needing tracking
 output/
+
+# Aider AI specific files
+.aider/
+*.aider*
+
+# Github Copilot specific files
+.github/copilot/
+.github/
